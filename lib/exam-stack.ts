@@ -131,5 +131,13 @@ export class ExamStack extends cdk.Stack {
     lambdaYFn.addEventSource(new events.SqsEventSource(queueA));
     lambdaYFn.addEventSource(new events.SqsEventSource(queueB));
 
+    topic1.addSubscription(new subs.SqsSubscription(queueA, {
+      filterPolicy: {
+        country: sns.SubscriptionFilter.stringFilter({
+          allowlist: ['Ireland', 'China'],
+        }),
+      },
+    }));
+
   }
 }
