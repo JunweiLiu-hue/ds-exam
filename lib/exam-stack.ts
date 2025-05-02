@@ -83,7 +83,6 @@ export class ExamStack extends cdk.Stack {
 
     // ==================================
     // Question 2 - Event-Driven architecture
-
     const bucket = new s3.Bucket(this, "exam-bucket", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
@@ -113,6 +112,11 @@ export class ExamStack extends cdk.Stack {
       },
     });
 
+    topic1.grantPublish(lambdaXFn);
+
+    topic1.addSubscription(new subs.SqsSubscription(queueA));
+    topic1.addSubscription(new subs.SqsSubscription(queueB));
+
     const lambdaYFn = new lambdanode.NodejsFunction(this, "LambdaYFn", {
       architecture: lambda.Architecture.ARM_64,
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -123,6 +127,9 @@ export class ExamStack extends cdk.Stack {
         REGION: "eu-west-1",
       },
     });
+
+    lambdaYFn.addEventSource(new events.SqsEventSource(queueA));
+    lambdaYFn.addEventSource(new events.SqsEventSource(queueB));
 
   }
 }
