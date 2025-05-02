@@ -139,5 +139,17 @@ export class ExamStack extends cdk.Stack {
       },
     }));
 
+    new sns.CfnSubscription(this, 'QueueBSubscription', {
+      topicArn: topic1.topicArn,
+      protocol: 'sqs',
+      endpoint: queueB.queueArn,
+      filterPolicy: {
+        country: ['Ireland', 'China'],
+        email: [{ exists: false }],
+      },
+    });
+
+
+
   }
 }
