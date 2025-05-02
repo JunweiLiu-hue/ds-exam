@@ -41,6 +41,8 @@ export class ExamStack extends cdk.Stack {
       },
     });
 
+    table.grantReadData(question1Fn);
+
     new custom.AwsCustomResource(this, "moviesddbInitData", {
       onCreate: {
         service: "DynamoDB",
@@ -70,18 +72,19 @@ export class ExamStack extends cdk.Stack {
       },
     });
 
-    const anEndpoint = api.root.addResource("patha");
     const crewResource = api.root.addResource("crew");
-    const moviesResource = crewResource.addResource("movies");
+    const roleResource = crewResource.addResource("{role}");
+    const moviesResource = roleResource.addResource("movies");
     const movieIdResource = moviesResource.addResource("{movieId}");
 
     movieIdResource.addMethod("GET", new apig.LambdaIntegration(question1Fn));
 
 
+
     // ==================================
     // Question 2 - Event-Driven architecture
 
-     const bucket = new s3.Bucket(this, "exam-bucket", {
+    const bucket = new s3.Bucket(this, "exam-bucket", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       publicReadAccess: false,
@@ -90,7 +93,7 @@ export class ExamStack extends cdk.Stack {
     const topic1 = new sns.Topic(this, "Topic1", {
       displayName: "Exam topic",
     });
-    
+
     const queueB = new sqs.Queue(this, "QueueB", {
       receiveMessageWaitTime: cdk.Duration.seconds(5),
     });
@@ -98,7 +101,7 @@ export class ExamStack extends cdk.Stack {
     const queueA = new sqs.Queue(this, "queueA", {
       receiveMessageWaitTime: cdk.Duration.seconds(5),
     });
-    
+
     const lambdaXFn = new lambdanode.NodejsFunction(this, "LambdaXFn", {
       architecture: lambda.Architecture.ARM_64,
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -120,7 +123,6 @@ export class ExamStack extends cdk.Stack {
         REGION: "eu-west-1",
       },
     });
-    
+
   }
 }
-  
