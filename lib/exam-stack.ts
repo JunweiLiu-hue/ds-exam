@@ -114,7 +114,6 @@ export class ExamStack extends cdk.Stack {
 
     topic1.grantPublish(lambdaXFn);
 
-    topic1.addSubscription(new subs.SqsSubscription(queueA));
     topic1.addSubscription(new subs.SqsSubscription(queueB));
 
     const lambdaYFn = new lambdanode.NodejsFunction(this, "LambdaYFn", {
