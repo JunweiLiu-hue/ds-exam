@@ -1,43 +1,81 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import {
+  DynamoDBClient
+} from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  GetCommand
+} from "@aws-sdk/lib-dynamodb";
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+const TABLE_NAME = process.env.CREW_TABLE || "CrewTable";
 
-const client = createDDbDocClient();
+const client = DynamoDBDocumentClient.from(
+  new DynamoDBClient({ region: process.env.REGION }),
+  {
+    marshallOptions: {
+      convertEmptyValues: true,
+      removeUndefinedValues: true,
+      convertClassInstanceToMap: true,
+    },
+    unmarshallOptions: {
+      wrapNumbers: false,
+    },
+  }
+);
 
-export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
+export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+  const method = event.requestContext.http.method;
+  const headers = { "content-type": "application/json" };
+
   try {
-    console.log("Event: ", JSON.stringify(event));
+    if (method === "GET" && event.rawPath === "/crew/{role}/movies/{movieId}") {
+      const role = event.pathParameters?.role;
+      const movieId = event.pathParameters?.movieId;
+
+      if (!role || !movieId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: "Missing role or movieId" }),
+        };
+      }
+
+      const command = new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          movieId: Number(movieId),
+          role: role,
+        },
+      });
+
+      const result = await client.send(command);
+
+      if (!result.Item) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: "Crew not found" }),
+        };
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(result.Item),
+      };
+    }
 
     return {
-      statusCode: 200,
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({}),
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: "Method Not Allowed" }),
     };
   } catch (error: any) {
-    console.log(JSON.stringify(error));
+    console.error("Error:", error);
     return {
       statusCode: 500,
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ error }),
+      headers,
+      body: JSON.stringify({ error: "Internal Server Error" }),
     };
   }
 };
-
-function createDDbDocClient() {
-  const ddbClient = new DynamoDBClient({ region: process.env.REGION });
-  const marshallOptions = {
-    convertEmptyValues: true,
-    removeUndefinedValues: true,
-    convertClassInstanceToMap: true,
-  };
-  const unmarshallOptions = {
-    wrapNumbers: false,
-  };
-  const translateConfig = { marshallOptions, unmarshallOptions };
-  return DynamoDBDocumentClient.from(ddbClient, translateConfig);
-}
